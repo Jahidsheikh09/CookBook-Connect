@@ -1,9 +1,12 @@
+// src/users/users.module.ts
 import { Module } from '@nestjs/common';
-import { UsersResolver } from './users.resolver';
 import { UsersService } from './users.service';
-import { PrismaService } from '../prisma/parisma.service';
+import { UsersResolver } from './users.resolver';
+import { PrismaModule } from '../prisma/parisma.module';
 
 @Module({
-  providers: [UsersResolver, UsersService, PrismaService],
+  imports: [PrismaModule],
+  providers: [UsersService, UsersResolver],
+  exports: [UsersService], // 👈 important so other modules can use it
 })
 export class UsersModule {}

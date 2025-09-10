@@ -1,3 +1,4 @@
+// src/recipes/recipes.resolver.ts
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { RecipesService } from './recipes.service';
 import { UseGuards } from '@nestjs/common';
@@ -30,14 +31,15 @@ export class RecipesResolver {
 
   @Mutation(() => Object)
   @UseGuards(GqlAuthGuard)
-  updateRecipe(@Args('id') id: string, @Args('input') input: UpdateRecipeInput) {
-    return this.recipesService.update(id, input);
+  updateRecipe(@Args('id') id: string, @Args('input') input: UpdateRecipeInput, @CurrentUser() user?: any) {
+    return this.recipesService.update(id, input, user?.id);
   }
 
   @Mutation(() => Boolean)
   @UseGuards(GqlAuthGuard)
-  deleteRecipe(@Args('id') id: string) {
-    return this.recipesService.delete(id).then(() => true);
+  async deleteRecipe(@Args('id') id: string, @CurrentUser() user?: any) {
+    await this.recipesService.delete(id, user?.id);
+    return true;
   }
 
   @Mutation(() => Object)

@@ -38,7 +38,6 @@ export class RecipesService {
       });
     }
 
-    // re-fetch enriched doc and index
     const toIndex = await this.enrichForIndex(recipe.id);
     if (toIndex) await this.elastic.indexRecipe(toIndex);
 
@@ -75,7 +74,7 @@ export class RecipesService {
   async delete(recipeId: string, userId?: string) {
     const recipe = await this.prisma.recipe.findUnique({ where: { id: recipeId } });
     if (!recipe) throw new NotFoundException('Recipe not found');
-    if (userId && recipe.authorId !== userId) throw new ForbiddenException('Only author can delete');
+    if (userId && recipe.authorId !== userId) throw new ForbiddenException('Only author can delete this recipe');
 
     await this.prisma.comment.deleteMany({ where: { recipeId } });
     await this.prisma.rating.deleteMany({ where: { recipeId } });
@@ -84,11 +83,70 @@ export class RecipesService {
 
     await this.prisma.recipe.delete({ where: { id: recipeId } });
 
-    // remove from ES
     await this.elastic.deleteRecipeFromIndex(recipeId);
 
     return { success: true };
   }
 
-  // existing findAll, findById, rate, comment functions...
+  async findAll() {
+    return this.prisma.recipe.findMany({
+      include: {
+        ingredients: true,
+        instructions: { orderBy: { stepNumber: 'asc' } },
+        ratings: true,
+        comments: { include: { user: true }, orderBy: { createdAt: 'desc' } },
+        author: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findById(recipeId: string) {
+    const recipe = await this.prisma.recipe.findUnique({
+      where: { id: recipeId },
+      include: {
+        ingredients: true,
+        instructions: { orderBy: { stepNumber: 'asc' } },
+        ratings: true,
+        comments: { include: { user: true }, orderBy: { createdAt: 'desc' } },
+        author: true,
+      },
+    });
+    if (!recipe) throw new NotFoundException('Recipe not found');
+    return recipe;
+  }
+
+  async addRating(userId: string, input: RatingInput) {
+    const recipeId = input.recipeId!;
+    if (!recipeId) throw new BadRequestException('recipeId is required');
+    if (input.score < 1 || input.score > 5) throw new BadRequestException('Score must be 1-5');
+
+    const rating = await this.prisma.rating.upsert({
+      where: { userId_recipeId: { userId, recipeId } },
+      update: { score: input.score, review: input.review ?? null },
+      create: { userId, recipeId, score: input.score, review: input.review ?? null },
+    });
+
+    // reindex recipe
+    const toIndex = await this.enrichForIndex(recipeId);
+    if (toIndex) await this.elastic.indexRecipe(toIndex);
+
+    return rating;
+  }
+
+  async addComment(userId: string, input: CommentInput) {
+    const recipeId = input.recipeId!;
+    if (!recipeId) throw new BadRequestException('recipeId is required');
+
+    const comment = await this.prisma.comment.create({
+      data: { userId, recipeId, content: input.content },
+      include: { user: true },
+    });
+
+    // reindex recipe
+    const toIndex = await this.enrichForIndex(recipeId);
+    if (toIndex) await this.elastic.indexRecipe(toIndex);
+
+    return comment;
+  }
 }
