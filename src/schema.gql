@@ -1,0 +1,31 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Mutation {
+  updateProfile(id: String!, input: UpdateUserInput!): UserType!
+}
+
+type Query {
+  hello: String!
+}
+
+input UpdateUserInput {
+  avatar: String
+  bio: String
+  name: String
+}
+
+type UserType {
+  avatar: String
+  bio: String
+  createdAt: DateTime!
+  email: String!
+  id: ID!
+  name: String
+}

@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String?
+  bio       String?
+  avatar    String?
+  recipes   Recipe[]  @relation("UserRecipes")
+  ratings   Rating[]
+  comments  Comment[]
+  followers Follow[]  @relation("UserFollowers") // people who follow this user
+  following Follow[]  @relation("UserFollowing") // people this user follows
+  createdAt DateTime  @default(now())
+}
+
+model Recipe {
+  id          String             @id @default(uuid())
+  title       String
+  description String?
+  author      User               @relation(fields: [authorId], references: [id], name: "UserRecipes")
+  authorId    String
+  ingredients RecipeIngredient[]
+  instructions Instruction[]
+  ratings     Rating[]
+  comments    Comment[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  @@index([authorId])
+}
+
+model RecipeIngredient {
+  id       String  @id @default(uuid())
+  recipe   Recipe  @relation(fields: [recipeId], references: [id])
+  recipeId String
+  name     String
+  quantity String?
+}
+
+model Instruction {
+  id         String  @id @default(uuid())
+  recipe     Recipe  @relation(fields: [recipeId], references: [id])
+  recipeId   String
+  stepNumber Int
+  text       String
+}
+
+model Rating {
+  id       String  @id @default(uuid())
+  user     User    @relation(fields: [userId], references: [id])
+  userId   String
+  recipe   Recipe  @relation(fields: [recipeId], references: [id])
+  recipeId String
+  score    Int
+  review   String?
+  createdAt DateTime @default(now())
+  @@unique([userId, recipeId])
+}
+
+model Comment {
+  id       String  @id @default(uuid())
+  user     User    @relation(fields: [userId], references: [id])
+  userId   String
+  recipe   Recipe  @relation(fields: [recipeId], references: [id])
+  recipeId String
+  content  String
+  createdAt DateTime @default(now())
+}
+
+model Follow {
+  id         String @id @default(uuid())
+  follower   User   @relation("UserFollowing", fields: [followerId], references: [id])
+  followerId String
+  following  User   @relation("UserFollowers", fields: [followingId], references: [id])
+  followingId String
+  createdAt  DateTime @default(now())
+  @@unique([followerId, followingId])
+}
