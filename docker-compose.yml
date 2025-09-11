@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:17
-    container_name: nest_pg
+    container_name: postgres_17
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -12,21 +12,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  pgadmin:
-    image: dpage/pgadmin4:7
-    container_name: pgadmin
-    restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@local
-      PGADMIN_DEFAULT_PASSWORD: admin@123
-    ports:
-      - "8080:80"
-    depends_on:
-      - postgres
-
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.8.1
-    container_name: nest_es
+    container_name: elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -42,7 +30,7 @@ services:
 
   redis:
     image: redis:7
-    container_name: nest_redis
+    container_name: redis
     ports:
       - "6379:6379"
     volumes:
