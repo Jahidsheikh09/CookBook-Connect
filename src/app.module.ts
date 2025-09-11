@@ -4,11 +4,14 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
 import { PrismaModule } from './prisma/parisma.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { ElasticModule } from './elastic/elastic.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { JwtModule } from '@nestjs/jwt';   // 👈 ADD THIS
+import { JwtModule } from '@nestjs/jwt';
+import { AiModule } from './ai/ai.module';
+import { RedisModule } from './redis/redis.module';
 
 import { SearchResolver } from './search/search.resolver';
 
@@ -23,8 +26,14 @@ import { SearchResolver } from './search/search.resolver';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      subscriptions: {
+        'graphql-ws': true,
+      },
     }),
     PrismaModule,
+    RedisModule,
+    AiModule,
+    RealtimeModule,
     ElasticModule,
     AuthModule,
     UsersModule,

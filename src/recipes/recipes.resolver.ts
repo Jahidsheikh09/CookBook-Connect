@@ -1,37 +1,49 @@
-// src/recipes/recipes.resolver.ts
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { RecipesService } from './recipes.service';
+import { RecipeType } from './dto/recipe.type';
+import { CreateRecipeInput } from './dto/create-recipe.input';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from '../auth/gql-auth.guard';
 import { CurrentUser } from '../common/decorators';
-import { CreateRecipeInput } from './dto/create-recipe.input';
 import { UpdateRecipeInput } from './dto/update-recipe.input';
 import { RatingInput } from './dto/rating.input';
 import { CommentInput } from './dto/comment.input';
 
-@Resolver()
+@Resolver(() => RecipeType)
 export class RecipesResolver {
-  constructor(private recipesService: RecipesService) {}
+  constructor(private readonly recipesService: RecipesService) {}
 
-  @Query(() => [Object])
-  recipes() {
+  @Query(() => [RecipeType])
+  async recipes() {
     return this.recipesService.findAll();
   }
 
-  @Query(() => Object)
-  recipe(@Args('id') id: string) {
+  @Query(() => RecipeType)
+  async recipe(@Args('id') id: string) {
     return this.recipesService.findById(id);
   }
 
-  @Mutation(() => Object)
+  @Query(() => [RecipeType], { name: 'searchRecipes' })
+  async searchRecipes(@Args('query', { type: () => String }) query: string) {
+    return this.recipesService.search(query);
+  }
+
+  @Mutation(() => RecipeType)
   @UseGuards(GqlAuthGuard)
-  createRecipe(@CurrentUser() user: any, @Args('input') input: CreateRecipeInput) {
+  async createRecipe(
+    @CurrentUser() user: any,
+    @Args('input') input: CreateRecipeInput,
+  ) {
     return this.recipesService.create(user.id, input);
   }
 
-  @Mutation(() => Object)
+  @Mutation(() => RecipeType)
   @UseGuards(GqlAuthGuard)
-  updateRecipe(@Args('id') id: string, @Args('input') input: UpdateRecipeInput, @CurrentUser() user?: any) {
+  async updateRecipe(
+    @Args('id') id: string,
+    @Args('input') input: UpdateRecipeInput,
+    @CurrentUser() user?: any,
+  ) {
     return this.recipesService.update(id, input, user?.id);
   }
 
@@ -42,13 +54,13 @@ export class RecipesResolver {
     return true;
   }
 
-  @Mutation(() => Object)
+  @Mutation(() => RatingInput) // or RatingType if you define output type
   @UseGuards(GqlAuthGuard)
   addRating(@CurrentUser() user: any, @Args('input') input: RatingInput) {
     return this.recipesService.addRating(user.id, input);
   }
 
-  @Mutation(() => Object)
+  @Mutation(() => CommentInput) // or CommentType
   @UseGuards(GqlAuthGuard)
   addComment(@CurrentUser() user: any, @Args('input') input: CommentInput) {
     return this.recipesService.addComment(user.id, input);

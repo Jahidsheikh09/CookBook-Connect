@@ -17,7 +17,7 @@ async function run() {
       authorName: r.author?.name ?? null,
       ingredients: (r.ingredients ?? []).map((i: any) => ({ name: (i.name ?? '').toLowerCase(), name_text: i.name ?? '', quantity: i.quantity ?? null })),
       instructions: (r.instructions ?? []).map((s: any) => s.text).join('\n'),
-      avgRating: r.ratings.length ? r.ratings.reduce((s,a)=>s+a.score,0)/r.ratings.length : 0,
+      avgRating: r.ratings.length ? r.ratings.reduce((s: number, a: { score: number }) => s + a.score, 0) / r.ratings.length : 0,
       commentCount: r.comments.length,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,

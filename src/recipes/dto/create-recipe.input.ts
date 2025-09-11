@@ -1,6 +1,23 @@
+// src/recipes/dto/create-recipe.input.ts
 import { InputType, Field } from '@nestjs/graphql';
-import { IngredientInput } from './ingredient.input';
-import { InstructionInput } from './instruction.input';
+
+@InputType()
+export class IngredientInput {
+  @Field()
+  name!: string;
+
+  @Field({ nullable: true })
+  quantity?: string;
+}
+
+@InputType()
+export class InstructionInput {
+  @Field()
+  text!: string;
+
+  @Field({ nullable: true })
+  stepNumber?: number;
+}
 
 @InputType()
 export class CreateRecipeInput {
@@ -10,9 +27,9 @@ export class CreateRecipeInput {
   @Field({ nullable: true })
   description?: string;
 
-  @Field(() => [IngredientInput])
-  ingredients!: IngredientInput[];
+  @Field(() => [IngredientInput], { nullable: 'itemsAndList' })
+  ingredients?: IngredientInput[];
 
-  @Field(() => [InstructionInput])
-  instructions!: InstructionInput[];
+  @Field(() => [InstructionInput], { nullable: 'itemsAndList' })
+  instructions?: InstructionInput[];
 }

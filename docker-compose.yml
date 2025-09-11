@@ -1,55 +1,54 @@
 services:
   postgres:
     image: postgres:17
-    container_name: postgres_17
+    container_name: nest_pg
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
       POSTGRES_DB: devdb
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-    networks:
-      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4:7
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local
+      PGADMIN_DEFAULT_PASSWORD: admin@123
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.8.1
-    container_name: elasticsearch
+    container_name: nest_es
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - 'ES_JAVA_OPTS=-Xms512m -Xmx512m'
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ports:
-      - '9200:9200'
-    volumes:
-      - esdata:/usr/share/elasticsearch/data
+      - "9200:9200"
     ulimits:
       memlock:
         soft: -1
         hard: -1
-    networks:
-      - backend
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
 
-  # pgadmin:
-  #   image: dpage/pgadmin4
-  #   container_name: pgadmin4
-  #   restart: unless-stopped
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com
-  #     PGADMIN_DEFAULT_PASSWORD: admin123
-  #   ports:
-  #     - '8080:80'
-  #   depends_on:
-  #     - postgres
-  #   networks:
-  #     - backend
+  redis:
+    image: redis:7
+    container_name: nest_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
 
 volumes:
   pgdata:
   esdata:
-
-networks:
-  backend:
-    driver: bridge
+  redisdata:
