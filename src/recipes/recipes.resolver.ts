@@ -1,13 +1,14 @@
 import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
 import { RecipesService } from './recipes.service';
-import { RecipeType } from './dto/recipe.type';
+import { RecipeType, RatingType, CommentType } from './dto/recipe.type';
 import { CreateRecipeInput } from './dto/create-recipe.input';
-import { UseGuards } from '@nestjs/common';
-import { GqlAuthGuard } from '../auth/gql-auth.guard';
-import { CurrentUser } from '../common/decorators';
 import { UpdateRecipeInput } from './dto/update-recipe.input';
 import { RatingInput } from './dto/rating.input';
 import { CommentInput } from './dto/comment.input';
+import { UseGuards } from '@nestjs/common';
+import { GqlAuthGuard } from '../auth/gql-auth.guard';
+import { CurrentUser } from '../common/decorators';
+import { SearchRecipesResult } from './dto/search-recipes.output';
 
 @Resolver(() => RecipeType)
 export class RecipesResolver {
@@ -23,7 +24,7 @@ export class RecipesResolver {
     return this.recipesService.findById(id);
   }
 
-  @Query(() => [RecipeType], { name: 'searchRecipes' })
+  @Query(() => SearchRecipesResult, { name: 'searchRecipes' })
   async searchRecipes(@Args('query', { type: () => String }) query: string) {
     return this.recipesService.search(query);
   }
@@ -54,15 +55,18 @@ export class RecipesResolver {
     return true;
   }
 
-  @Mutation(() => RatingInput) // or RatingType if you define output type
+  @Mutation(() => RatingType)
   @UseGuards(GqlAuthGuard)
-  addRating(@CurrentUser() user: any, @Args('input') input: RatingInput) {
+  async addRating(@CurrentUser() user: any, @Args('input') input: RatingInput) {
     return this.recipesService.addRating(user.id, input);
   }
 
-  @Mutation(() => CommentInput) // or CommentType
+  @Mutation(() => CommentType)
   @UseGuards(GqlAuthGuard)
-  addComment(@CurrentUser() user: any, @Args('input') input: CommentInput) {
+  async addComment(
+    @CurrentUser() user: any,
+    @Args('input') input: CommentInput,
+  ) {
     return this.recipesService.addComment(user.id, input);
   }
 }

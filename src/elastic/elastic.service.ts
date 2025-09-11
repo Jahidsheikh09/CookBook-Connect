@@ -18,7 +18,6 @@ export class ElasticService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      // indices.exists returns boolean in v8
       const exists = await this.client.indices.exists({ index: this.index });
       if (!exists) {
         await this.createIndex();
@@ -51,30 +50,45 @@ export class ElasticService implements OnModuleInit {
   async createIndex() {
     return this.client.indices.create({
       index: this.index,
-      body: {
-        mappings: {
-          properties: {
-            title: { type: 'text', analyzer: 'english' },
-            description: { type: 'text', analyzer: 'english' },
-            authorId: { type: 'keyword' },
-            authorName: { type: 'text' },
-            ingredients: {
-              type: 'nested',
-              properties: {
-                name: { type: 'keyword' },
-                name_text: { type: 'text', analyzer: 'english' },
-                quantity: { type: 'text' },
-              },
+      settings: {
+        analysis: {
+          analyzer: {
+            recipe_analyzer: {
+              type: 'custom',
+              tokenizer: 'standard',
+              filter: ['lowercase', 'stop', 'snowball'],
             },
-            instructions: { type: 'text' },
-            avgRating: { type: 'double' },
-            commentCount: { type: 'integer' },
-            createdAt: { type: 'date' },
-            updatedAt: { type: 'date' },
-            cuisine: { type: 'keyword' },
-            difficulty: { type: 'keyword' },
-            cookingTimeMinutes: { type: 'integer' },
           },
+        },
+      },
+      mappings: {
+        properties: {
+          title: { type: 'text', analyzer: 'recipe_analyzer' },
+          description: { type: 'text', analyzer: 'recipe_analyzer' },
+          authorId: { type: 'keyword' },
+          authorName: { type: 'keyword' },
+          ingredients: {
+            type: 'nested',
+            properties: {
+              name: { type: 'text' },
+              quantity: { type: 'keyword' },
+              unit: { type: 'keyword' },
+            },
+          },
+          instructions: {
+            type: 'nested',
+            properties: {
+              stepNumber: { type: 'integer' },
+              text: { type: 'text' },
+            },
+          },
+          cookingTimeMinutes: { type: 'integer' },
+          avgRating: { type: 'float' },
+          commentCount: { type: 'integer' },
+          cuisine: { type: 'keyword' },
+          difficulty: { type: 'keyword' },
+          createdAt: { type: 'date' },
+          updatedAt: { type: 'date' },
         },
       },
     });
@@ -82,6 +96,7 @@ export class ElasticService implements OnModuleInit {
 
   async indexRecipe(recipe: any) {
     if (!recipe || !recipe.id) return;
+
     const doc = {
       title: recipe.title,
       description: recipe.description ?? '',
@@ -89,8 +104,8 @@ export class ElasticService implements OnModuleInit {
       authorName: recipe.author?.name ?? null,
       ingredients: (recipe.ingredients ?? []).map((i: any) => ({
         name: (i.name ?? '').toLowerCase(),
-        name_text: i.name ?? '',
         quantity: i.quantity ?? null,
+        unit: i.unit ?? null,
       })),
       instructions: (recipe.instructions ?? [])
         .map((s: any) => s.text)
@@ -120,8 +135,8 @@ export class ElasticService implements OnModuleInit {
         id: recipeId,
         refresh: 'wait_for',
       });
-    } catch (err) {
-      // ignore not found errors
+    } catch (err: any) {
+      if (err.meta?.statusCode !== 404) throw err;
     }
   }
 
@@ -134,6 +149,7 @@ export class ElasticService implements OnModuleInit {
   async bulkIndex(recipes: any[]) {
     if (!recipes || recipes.length === 0) return;
     const body: any[] = [];
+
     for (const r of recipes) {
       body.push({ index: { _index: this.index, _id: r.id } });
       body.push({
@@ -143,8 +159,8 @@ export class ElasticService implements OnModuleInit {
         authorName: r.author?.name ?? null,
         ingredients: (r.ingredients ?? []).map((i: any) => ({
           name: (i.name ?? '').toLowerCase(),
-          name_text: i.name ?? '',
           quantity: i.quantity ?? null,
+          unit: i.unit ?? null,
         })),
         instructions: (r.instructions ?? []).map((s: any) => s.text).join('\n'),
         avgRating: r.avgRating ?? this.computeAvg(r.ratings),
@@ -153,7 +169,8 @@ export class ElasticService implements OnModuleInit {
         updatedAt: r.updatedAt,
       });
     }
-    await this.client.bulk({ index: this.index, refresh: 'wait_for', body });
+
+    await this.client.bulk({ refresh: 'wait_for', body });
   }
 
   async searchRecipes({
@@ -187,7 +204,7 @@ export class ElasticService implements OnModuleInit {
           fields: [
             'title^3',
             'description',
-            'ingredients.name_text',
+            'ingredients.name',
             'instructions',
           ],
           fuzziness: 'AUTO',
@@ -228,48 +245,42 @@ export class ElasticService implements OnModuleInit {
     const pageNum = Math.max(1, page ?? 1);
     const size = perPage ?? 10;
 
-    const body = {
+    const resp = await this.client.search({
+      index: this.index,
       query: {
-        bool: {
-          must,
-          filter,
-        },
+        bool: { must, filter },
       },
       sort,
       _source: true,
       from: (pageNum - 1) * size,
       size,
-    };
+    });
 
-    const resp = await this.client.search({ index: this.index, body });
-    // resp.hits.hits[]. _source is any; cast to any before spreading
     const hits = (resp.hits.hits as any[]).map((h: any) => ({
       id: h._id,
       score: h._score,
       ...(h._source as any),
     }));
-    return { total: (resp.hits.total as any) ?? 0, results: hits };
+
+    return { total: (resp.hits.total as any).value ?? 0, results: hits };
   }
 
   async autocompleteIngredient(prefix: string, size = 10) {
     if (!prefix || prefix.trim().length === 0) return [];
     const resp = await this.client.search({
       index: this.index,
-      body: {
-        size: 0,
-        aggs: {
-          ing_suggest: {
-            terms: {
-              field: 'ingredients.name',
-              include: `${prefix.toLowerCase()}.*`,
-              size,
-            },
+      size: 0,
+      aggs: {
+        ing_suggest: {
+          terms: {
+            field: 'ingredients.name',
+            include: `${prefix.toLowerCase()}.*`,
+            size,
           },
         },
       },
     });
 
-    // cast aggregations as any to access buckets safely
     const buckets = (resp.aggregations as any)?.ing_suggest?.buckets ?? [];
     return buckets.map((b: any) => b.key);
   }

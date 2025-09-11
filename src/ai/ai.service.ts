@@ -2,7 +2,7 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import fetch from 'node-fetch';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../prisma/parisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { v4 as uuidv4 } from 'uuid';
 import { REDIS_CLIENT } from '../redis/redis.module';
 import Redis from 'ioredis';

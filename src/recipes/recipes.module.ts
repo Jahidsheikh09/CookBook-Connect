@@ -1,16 +1,11 @@
 import { Module } from '@nestjs/common';
 import { RecipesService } from './recipes.service';
 import { RecipesResolver } from './recipes.resolver';
-import { PrismaService } from '../prisma/parisma.service';
-import { AuthModule } from '../auth/auth.module'; // Required for GqlAuthGuard
+import { PrismaService } from '../prisma/prisma.service';
+import { ElasticService } from '../elastic/elastic.service';
+import { RealtimeService } from '../realtime/realtime.service';
 
 @Module({
-  imports: [AuthModule], // import AuthModule for authentication/guards
-  providers: [
-    RecipesService,
-    RecipesResolver,
-    PrismaService, // Inject PrismaService for DB access
-  ],
-  exports: [RecipesService],
+  providers: [RecipesService, RecipesResolver, PrismaService, ElasticService, RealtimeService],
 })
 export class RecipesModule {}

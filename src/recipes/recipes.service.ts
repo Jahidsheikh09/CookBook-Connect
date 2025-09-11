@@ -5,7 +5,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/parisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { ElasticService } from '../elastic/elastic.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { CreateRecipeInput } from './dto/create-recipe.input';

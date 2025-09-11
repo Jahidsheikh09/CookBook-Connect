@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
-import { PrismaModule } from './prisma/parisma.module';
+import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { ElasticModule } from './elastic/elastic.module';
 import { RecipesModule } from './recipes/recipes.module';
@@ -18,7 +18,7 @@ import { SearchResolver } from './search/search.resolver';
 @Module({
   imports: [
     JwtModule.register({
-      global: true, // 👈 makes it available everywhere
+      global: true, 
       secret: process.env.JWT_SECRET || 'supersecret',
       signOptions: { expiresIn: '1h' },
     }),
@@ -26,9 +26,8 @@ import { SearchResolver } from './search/search.resolver';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
-      subscriptions: {
-        'graphql-ws': true,
-      },
+      sortSchema: true,
+      playground: true,
     }),
     PrismaModule,
     RedisModule,
